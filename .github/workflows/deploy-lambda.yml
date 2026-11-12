@@ -2,7 +2,7 @@ name: Deploy Lambda
 
 # Tests and deploys lambda/ to the existing AWS Lambda function whenever
 # it changes on main. Setup (OIDC role, repository variables): see
-# "Automatic deployment with GitHub Actions" in README.md.
+# "Automatic deployment with GitHub Actions" in docs/installation.md.
 
 on:
   push:

@@ -270,7 +270,17 @@ Still on the Lambda function page:
    pin one:
    - `ABS_DEFAULT_LIBRARY_ID` = the library ID (find it in the
      audiobookshelf URL when browsing a library)
-5. Click **Save**.
+5. Only if audiobookshelf sits behind **Cloudflare Access**: create a
+   service token (Zero Trust → Access → Service credentials), allow it
+   with a *Service Auth* policy on the `/api` path, and add both:
+   - `CF_ACCESS_CLIENT_ID` = the token's Client ID
+   - `CF_ACCESS_CLIENT_SECRET` = the token's Client Secret
+
+   They're sent as headers on API calls only. Stream URLs are fetched
+   by the Echo without headers, so the stream path
+   (`/api/items/*/file/*`) needs its own Access rule (e.g. Bypass
+   limited to your home IP).
+6. Click **Save**.
 
 While you're in **Configuration**, also bump the function timeout —
 the default 3 seconds is too tight for a cold-start Lambda calling
@@ -889,7 +899,18 @@ Weiter auf der Lambda-Seite:
    festlegen willst:
    - `ABS_DEFAULT_LIBRARY_ID` = die Bibliotheks-ID (in der
      audiobookshelf-URL beim Browsen einer Bibliothek sichtbar)
-5. **Save**.
+5. Nur falls audiobookshelf hinter **Cloudflare Access** liegt: einen
+   Service Token anlegen (Zero Trust → Access → Service credentials),
+   ihn mit einer *Service Auth*-Policy für den Pfad `/api` erlauben und
+   beide eintragen:
+   - `CF_ACCESS_CLIENT_ID` = Client ID des Tokens
+   - `CF_ACCESS_CLIENT_SECRET` = Client Secret des Tokens
+
+   Sie werden nur bei API-Aufrufen als Header mitgeschickt. Stream-URLs
+   ruft der Echo ohne Header ab, daher braucht der Stream-Pfad
+   (`/api/items/*/file/*`) eine eigene Access-Regel (z. B. Bypass nur
+   für deine Heim-IP).
+6. **Save**.
 
 Im Tab **Configuration** auch das Funktions-Timeout erhöhen — die
 Standard-3-Sekunden sind für einen kalten Lambda-Aufruf gegen

@@ -7,13 +7,22 @@
 // audiobookshelf web UI). API keys created in 2.26+ are JWTs and work
 // both as `Authorization: Bearer <key>` for API calls and as `?token=<key>`
 // for stream URLs.
+//
+// Optional: if the server sits behind Cloudflare Access, a service token
+// (cfAccess.clientId/clientSecret) is sent as CF-Access-Client-Id/-Secret
+// headers on API calls. Stream URLs can't carry headers, so the stream path
+// needs its own Access rule.
 
 class AbsClient {
-  constructor({ baseUrl, apiKey, fetchImpl } = {}) {
+  constructor({ baseUrl, apiKey, cfAccess, fetchImpl } = {}) {
     if (!baseUrl) throw new Error('AbsClient: baseUrl is required');
     if (!apiKey) throw new Error('AbsClient: apiKey is required');
+    if (cfAccess && !cfAccess.clientId !== !cfAccess.clientSecret) {
+      throw new Error('AbsClient: cfAccess needs both clientId and clientSecret');
+    }
     this.baseUrl = baseUrl.replace(/\/+$/, '');
     this.apiKey = apiKey;
+    this.cfAccess = cfAccess && cfAccess.clientId ? cfAccess : null;
     this.fetch = fetchImpl || globalThis.fetch;
   }
 
@@ -25,6 +34,10 @@ class AbsClient {
         Authorization: `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
         Accept: 'application/json',
+        ...(this.cfAccess && {
+          'CF-Access-Client-Id': this.cfAccess.clientId,
+          'CF-Access-Client-Secret': this.cfAccess.clientSecret,
+        }),
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -119,6 +132,10 @@ function fromEnv(env = process.env) {
   return new AbsClient({
     baseUrl: env.ABS_BASE_URL,
     apiKey: env.ABS_API_KEY,
+    cfAccess: {
+      clientId: env.CF_ACCESS_CLIENT_ID,
+      clientSecret: env.CF_ACCESS_CLIENT_SECRET,
+    },
   });
 }
 

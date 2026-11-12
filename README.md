@@ -499,6 +499,22 @@ One-time setup in AWS (IAM console):
    `sts.amazonaws.com`, GitHub organization = your GitHub user,
    repository = this repo, branch = `main`. Name it e.g.
    `github-deploy-audiobookshelf-alexa`.
+
+   **Check the subject format.** The wizard writes the trust condition
+   as `repo:<owner>/<repo>:ref:refs/heads/main`. Repositories using
+   GitHub's *immutable subject* send the numeric owner and repo IDs
+   instead, and the deploy then fails with "Not authorized to perform
+   sts:AssumeRoleWithWebIdentity". Check with:
+
+   ```bash
+   gh api repos/<owner>/<repo>/actions/oidc/customization/sub
+   ```
+
+   If it shows `"use_immutable_subject": true`, edit the role's trust
+   relationship and set the `token.actions.githubusercontent.com:sub`
+   condition to the returned `sub_claim_prefix` plus
+   `:ref:refs/heads/main`, e.g.
+   `repo:jdoe@1234567/audiobookshelf-alexa@987654321:ref:refs/heads/main`.
 3. Instead of a managed policy, add this inline policy (replace
    region, account ID and function name):
 
@@ -1125,6 +1141,23 @@ Einmalige Einrichtung in AWS (IAM-Konsole):
    Audience `sts.amazonaws.com`, GitHub organization = dein
    GitHub-Benutzer, Repository = dieses Repo, Branch = `main`. Name
    z. B. `github-deploy-audiobookshelf-alexa`.
+
+   **Subject-Format prüfen.** Der Assistent schreibt die
+   Trust-Bedingung als `repo:<owner>/<repo>:ref:refs/heads/main`.
+   Repositories mit GitHubs *Immutable Subject* schicken stattdessen
+   die numerischen Owner- und Repo-IDs, und das Deployment scheitert
+   dann mit "Not authorized to perform sts:AssumeRoleWithWebIdentity".
+   Prüfen mit:
+
+   ```bash
+   gh api repos/<owner>/<repo>/actions/oidc/customization/sub
+   ```
+
+   Steht dort `"use_immutable_subject": true`, die Trust Relationship
+   der Rolle bearbeiten und die Bedingung
+   `token.actions.githubusercontent.com:sub` auf das zurückgegebene
+   `sub_claim_prefix` plus `:ref:refs/heads/main` setzen, z. B.
+   `repo:jdoe@1234567/audiobookshelf-alexa@987654321:ref:refs/heads/main`.
 3. Statt einer verwalteten Policy diese Inline-Policy hinzufügen
    (Region, Konto-ID und Funktionsname ersetzen):
 

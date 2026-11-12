@@ -733,7 +733,10 @@ const ErrorHandler = {
 // Skill entry point
 // ---------------------------------------------------------------------------
 
-exports.handler = Alexa.SkillBuilders.custom()
+// Built with .create() and wrapped in an async handler: Lambda's Node.js 24+
+// runtimes reject the callback-style handler that SkillBuilder's .lambda()
+// returns (Runtime.CallbackHandlerDeprecated).
+const skill = Alexa.SkillBuilders.custom()
   .addRequestHandlers(
     LaunchRequestHandler,
     PlayBookIntentHandler,
@@ -754,7 +757,9 @@ exports.handler = Alexa.SkillBuilders.custom()
     SessionEndedRequestHandler,
   )
   .addErrorHandlers(ErrorHandler)
-  .lambda();
+  .create();
+
+exports.handler = async (event, context) => skill.invoke(event, context);
 
 // Exported only for the smoke-test scripts under /tmp.
 exports._internals = {

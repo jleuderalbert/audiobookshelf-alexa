@@ -103,14 +103,9 @@ function audioPlayerCtx({ tokenState, offsetMs = 0, playerActivity = 'PLAYING' }
   return { token: encodeToken(tokenState), offsetInMilliseconds: offsetMs, playerActivity };
 }
 
-// Promisify the Lambda-style callback handler exported from index.js.
+// Call the async Lambda handler exported from index.js.
 function invoke(handler, envelope) {
-  return new Promise((resolve, reject) => {
-    handler(envelope, {}, (err, response) => {
-      if (err) reject(err);
-      else resolve(response);
-    });
-  });
+  return handler(envelope, {});
 }
 
 // Helpers for common assertions on responses.

@@ -3,7 +3,7 @@
 A personal-use Alexa skill that streams audiobooks from a self-hosted
 [audiobookshelf](https://www.audiobookshelf.org/) instance.
 
-It runs on AWS Lambda (Node.js 22) and uses Alexa's `AudioPlayer`
+It runs on AWS Lambda (Node.js 24) and uses Alexa's `AudioPlayer`
 interface to stream tracks directly from your audiobookshelf server.
 Playback progress is synced back to audiobookshelf so it stays in sync
 with the web/mobile apps.
@@ -202,8 +202,8 @@ broken code.
 4. Choose **Author from scratch**.
 5. Fill in:
    - **Function name:** `audiobookshelf-alexa`
-   - **Runtime:** `Node.js 22.x` (the current LTS at time of writing;
-     `Node.js 20.x` also works if it's still available)
+   - **Runtime:** `Node.js 24.x` (the current LTS at time of writing;
+     `Node.js 22.x` and newer also work)
    - **Architecture:** `x86_64` (default)
    - **Permissions:** leave at "Create a new role with basic Lambda
      permissions"
@@ -472,6 +472,49 @@ If you change the AudioPlayer token shape (`lib/playback.js`), expect
 already-running playback sessions to fail until they restart — older
 tokens won't decode against the new code.
 
+### Automatic deployment with GitHub Actions
+
+`.github/workflows/deploy-lambda.yml` runs the tests and deploys
+`lambda/` to your existing Lambda function on every push to `main`
+that touches `lambda/` (or manually via **Actions → Deploy Lambda →
+Run workflow**). It logs in to AWS via OpenID Connect, so no AWS keys
+are stored in GitHub. Until it's configured, only the tests run.
+
+One-time setup in AWS (IAM console):
+
+1. **Identity providers → Add provider → OpenID Connect**: provider
+   URL `https://token.actions.githubusercontent.com`, audience
+   `sts.amazonaws.com`. (Skip if it already exists.)
+2. **Roles → Create role → Web identity**: pick that provider, audience
+   `sts.amazonaws.com`, GitHub organization = your GitHub user,
+   repository = this repo, branch = `main`. Name it e.g.
+   `github-deploy-audiobookshelf-alexa`.
+3. Instead of a managed policy, add this inline policy (replace
+   region, account ID and function name):
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Action": ["lambda:UpdateFunctionCode", "lambda:GetFunction", "lambda:GetFunctionConfiguration"],
+       "Resource": "arn:aws:lambda:us-east-1:<account-id>:function:<function-name>"
+     }]
+   }
+   ```
+
+Then in GitHub: **Settings → Secrets and variables → Actions →
+Variables** and add:
+
+| Variable | Value |
+|----------|-------|
+| `AWS_DEPLOY_ROLE_ARN` | ARN of the role from step 2 (required) |
+| `LAMBDA_FUNCTION_NAME` | your function name (default `audiobookshelf-alexa`) |
+| `AWS_REGION` | the function's region (default `us-east-1`) |
+
+The workflow only updates the code; runtime, handler and environment
+variables stay as configured in the Lambda console.
+
 ## Power-user shortcut: ASK CLI
 
 If you're comfortable on the command line, the [ASK CLI](https://developer.amazon.com/en-US/docs/alexa/smapi/quick-start-alexa-skills-kit-command-line-interface.html)
@@ -599,7 +642,7 @@ Ein Alexa-Skill für den Privatgebrauch, der Hörbücher von einer
 selbst gehosteten [audiobookshelf](https://www.audiobookshelf.org/)-
 Instanz streamt.
 
-Er läuft auf AWS Lambda (Node.js 22) und nutzt Alexas
+Er läuft auf AWS Lambda (Node.js 24) und nutzt Alexas
 `AudioPlayer`-Schnittstelle, um Tracks direkt vom audiobookshelf-Server
 zu streamen. Der Wiedergabefortschritt wird zurück an audiobookshelf
 synchronisiert, sodass alles mit der Web-/Mobile-App in Sync bleibt.
@@ -780,8 +823,8 @@ deployen.
 4. **Author from scratch** wählen.
 5. Ausfüllen:
    - **Function name:** `audiobookshelf-alexa`
-   - **Runtime:** `Node.js 22.x` (aktuelles LTS; `Node.js 20.x` geht
-     auch, falls noch verfügbar)
+   - **Runtime:** `Node.js 24.x` (aktuelles LTS; `Node.js 22.x` und
+     neuer gehen auch)
    - **Architecture:** `x86_64` (Standard)
    - **Permissions:** "Create a new role with basic Lambda
      permissions" lassen
@@ -1042,6 +1085,51 @@ Builder **Build Model** klicken — und nach Änderungen an
 Wenn du das AudioPlayer-Token-Format (`lib/playback.js`) änderst,
 schlagen laufende Wiedergabesessions bis zum Neustart fehl — alte
 Tokens dekodieren nicht gegen den neuen Code.
+
+### Automatisches Deployment mit GitHub Actions
+
+`.github/workflows/deploy-lambda.yml` führt die Tests aus und deployt
+`lambda/` in deine bestehende Lambda-Funktion, sobald auf `main` etwas
+unter `lambda/` geändert wird (oder manuell über **Actions → Deploy
+Lambda → Run workflow**). Die Anmeldung bei AWS läuft über OpenID
+Connect, es liegen also keine AWS-Schlüssel in GitHub. Solange nichts
+eingerichtet ist, laufen nur die Tests.
+
+Einmalige Einrichtung in AWS (IAM-Konsole):
+
+1. **Identity providers → Add provider → OpenID Connect**: Provider-URL
+   `https://token.actions.githubusercontent.com`, Audience
+   `sts.amazonaws.com`. (Überspringen, falls schon vorhanden.)
+2. **Roles → Create role → Web identity**: diesen Provider wählen,
+   Audience `sts.amazonaws.com`, GitHub organization = dein
+   GitHub-Benutzer, Repository = dieses Repo, Branch = `main`. Name
+   z. B. `github-deploy-audiobookshelf-alexa`.
+3. Statt einer verwalteten Policy diese Inline-Policy hinzufügen
+   (Region, Konto-ID und Funktionsname ersetzen):
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [{
+       "Effect": "Allow",
+       "Action": ["lambda:UpdateFunctionCode", "lambda:GetFunction", "lambda:GetFunctionConfiguration"],
+       "Resource": "arn:aws:lambda:us-east-1:<konto-id>:function:<funktionsname>"
+     }]
+   }
+   ```
+
+Dann in GitHub unter **Settings → Secrets and variables → Actions →
+Variables** anlegen:
+
+| Variable | Wert |
+|----------|------|
+| `AWS_DEPLOY_ROLE_ARN` | ARN der Rolle aus Schritt 2 (Pflicht) |
+| `LAMBDA_FUNCTION_NAME` | dein Funktionsname (Standard `audiobookshelf-alexa`) |
+| `AWS_REGION` | Region der Funktion (Standard `us-east-1`) |
+
+Der Workflow aktualisiert nur den Code; Runtime, Handler und
+Umgebungsvariablen bleiben so, wie sie in der Lambda-Konsole
+eingestellt sind.
 
 ## Power-User-Abkürzung: ASK CLI
 

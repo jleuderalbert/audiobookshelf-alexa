@@ -43,6 +43,18 @@ if [[ "${DRY_RUN:-0}" == 1 ]]; then
   exit 0
 fi
 
+# Runs an `ask smapi` write command. On failure the CLI only says "status
+# code 400"; Amazon's actual reason (e.g. manifest violations) is only in the
+# --debug output, which also contains the access token, so print just the
+# status and response body lines.
+smapi_write() {
+  local out
+  if ! out=$(ask smapi "$@" --debug 2>&1); then
+    grep -E '^(status code|Response body):' <<< "$out" >&2 || echo "ask smapi $1 failed" >&2
+    return 1
+  fi
+}
+
 # Waits until manifest and the given locales' interaction models have left
 # IN_PROGRESS; fails if any of them FAILED.
 wait_for_builds() {
@@ -66,12 +78,12 @@ wait_for_builds() {
 }
 
 echo "updating manifest (endpoint $ENDPOINT_ARN, locales ${locales[*]})"
-ask smapi update-skill-manifest -s "$SKILL_ID" -g development --manifest "file:$manifest"
+smapi_write update-skill-manifest -s "$SKILL_ID" -g development --manifest "file:$manifest"
 wait_for_builds
 
 for l in "${locales[@]}"; do
   echo "updating interaction model $l"
-  ask smapi set-interaction-model -s "$SKILL_ID" -g development -l "$l" \
+  smapi_write set-interaction-model -s "$SKILL_ID" -g development -l "$l" \
     --interaction-model "file:$pkg/interactionModels/custom/$l.json"
 done
 wait_for_builds "${locales[@]}"

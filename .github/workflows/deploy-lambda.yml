@@ -1,0 +1,71 @@
+name: Deploy Lambda
+
+# Tests and deploys lambda/ to the existing AWS Lambda function whenever
+# it changes on main. Setup (OIDC role, repository variables): see
+# "Automatic deployment with GitHub Actions" in README.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lambda/**'
+      - '.github/workflows/deploy-lambda.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # needed to request the OIDC token for AWS
+
+concurrency:
+  group: deploy-lambda
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: lambda
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: lambda/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  deploy:
+    needs: test
+    # Skipped until the repository variable AWS_DEPLOY_ROLE_ARN is set.
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    env:
+      FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME || 'audiobookshelf-alexa' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: lambda/package-lock.json
+
+      - name: Build deployment package
+        run: |
+          npm ci --omit=dev
+          zip -qr ../audiobookshelf-alexa.zip . -x "test/*"
+
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Update function code
+        run: |
+          aws lambda update-function-code \
+            --function-name "$FUNCTION_NAME" \
+            --zip-file fileb://../audiobookshelf-alexa.zip \
+            --query '{Version: Version, CodeSha256: CodeSha256}'
+          aws lambda wait function-updated-v2 --function-name "$FUNCTION_NAME"

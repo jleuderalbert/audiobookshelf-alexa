@@ -3,7 +3,7 @@
 A personal-use Alexa skill that streams audiobooks from a self-hosted
 [audiobookshelf](https://www.audiobookshelf.org/) instance.
 
-It runs on AWS Lambda (Node.js 22) and uses Alexa's `AudioPlayer`
+It runs on AWS Lambda (Node.js 24) and uses Alexa's `AudioPlayer`
 interface to stream tracks directly from your audiobookshelf server.
 Playback progress is synced back to audiobookshelf so it stays in sync
 with the web/mobile apps.
@@ -202,8 +202,8 @@ broken code.
 4. Choose **Author from scratch**.
 5. Fill in:
    - **Function name:** `audiobookshelf-alexa`
-   - **Runtime:** `Node.js 22.x` (the current LTS at time of writing;
-     `Node.js 20.x` also works if it's still available)
+   - **Runtime:** `Node.js 24.x` (the current LTS at time of writing;
+     `Node.js 22.x` and newer also work)
    - **Architecture:** `x86_64` (default)
    - **Permissions:** leave at "Create a new role with basic Lambda
      permissions"
@@ -599,7 +599,7 @@ Ein Alexa-Skill für den Privatgebrauch, der Hörbücher von einer
 selbst gehosteten [audiobookshelf](https://www.audiobookshelf.org/)-
 Instanz streamt.
 
-Er läuft auf AWS Lambda (Node.js 22) und nutzt Alexas
+Er läuft auf AWS Lambda (Node.js 24) und nutzt Alexas
 `AudioPlayer`-Schnittstelle, um Tracks direkt vom audiobookshelf-Server
 zu streamen. Der Wiedergabefortschritt wird zurück an audiobookshelf
 synchronisiert, sodass alles mit der Web-/Mobile-App in Sync bleibt.
@@ -780,8 +780,8 @@ deployen.
 4. **Author from scratch** wählen.
 5. Ausfüllen:
    - **Function name:** `audiobookshelf-alexa`
-   - **Runtime:** `Node.js 22.x` (aktuelles LTS; `Node.js 20.x` geht
-     auch, falls noch verfügbar)
+   - **Runtime:** `Node.js 24.x` (aktuelles LTS; `Node.js 22.x` und
+     neuer gehen auch)
    - **Architecture:** `x86_64` (Standard)
    - **Permissions:** "Create a new role with basic Lambda
      permissions" lassen

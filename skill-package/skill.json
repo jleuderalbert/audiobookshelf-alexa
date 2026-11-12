@@ -31,7 +31,7 @@
       },
       "isAvailableWorldwide": false,
       "testingInstructions": "Personal-use skill. Configure Lambda environment variables ABS_BASE_URL and ABS_API_KEY pointing at the developer's own Audiobookshelf instance.",
-      "category": "MUSIC_AND_AUDIO",
+      "category": "STREAMING_SERVICE",
       "distributionCountries": ["DE", "US"]
     },
     "apis": {

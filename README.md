@@ -74,6 +74,8 @@ recognition can transcribe (single English words like
 │   │   ├── playback.js            # AudioPlayer token + offset helpers
 │   │   └── strings.js             # Localized response strings
 │   └── test/                      # node:test unit tests
+├── scripts/deploy-skill-package.sh  # SMAPI deploy of skill-package/
+├── .github/workflows/             # automatic Lambda + skill deploys
 ├── ask-resources.json             # ASK CLI deployment config
 └── .env.example                   # Required Lambda env vars
 ```
@@ -540,6 +542,37 @@ Variables** and add:
 
 The workflow only updates the code; runtime, handler and environment
 variables stay as configured in the Lambda console.
+
+#### Skill package (manifest and interaction models)
+
+`.github/workflows/deploy-skill.yml` uploads `skill-package/` to the
+skill's **development** stage on every push to `main` that touches it
+(or manually), via `scripts/deploy-skill-package.sh`. It sets the
+manifest's endpoint to the Lambda above (account from
+`AWS_DEPLOY_ROLE_ARN`, plus `AWS_REGION` and `LAMBDA_FUNCTION_NAME`),
+then uploads the interaction models and fails if a model build fails.
+Until `ALEXA_SKILL_ID` is set, it's skipped.
+
+It needs a Login with Amazon refresh token for your developer account.
+On your machine, after `ask configure`, store the one from your ASK CLI
+profile as a secret (or create a separate one with
+`ask util generate-lwa-tokens`):
+
+```bash
+jq -r '.profiles.default.token.refresh_token' ~/.ask/cli_config | gh secret set ASK_REFRESH_TOKEN
+```
+
+The token grants full SMAPI access to all skills of the developer
+account, so keep it only as a secret. Then add these variables:
+
+| Variable | Value |
+|----------|-------|
+| `ALEXA_SKILL_ID` | your skill ID, `amzn1.ask.skill....` (required) |
+| `ASK_VENDOR_ID` | your vendor ID (`ask smapi get-vendor-list`) (required) |
+| `ALEXA_LOCALES` | optional, e.g. `de-DE` to deploy only that locale (default: all locales in `skill.json`) |
+
+To check locally without uploading:
+`SKILL_ID=... ENDPOINT_ARN=... DRY_RUN=1 scripts/deploy-skill-package.sh`.
 
 ## Power-user shortcut: ASK CLI
 
@@ -1184,6 +1217,39 @@ Variables** anlegen:
 Der Workflow aktualisiert nur den Code; Runtime, Handler und
 Umgebungsvariablen bleiben so, wie sie in der Lambda-Konsole
 eingestellt sind.
+
+#### Skill-Paket (Manifest und Interaktionsmodelle)
+
+`.github/workflows/deploy-skill.yml` lädt `skill-package/` bei jedem
+Push auf `main`, der es ändert (oder manuell), über
+`scripts/deploy-skill-package.sh` in die **Development**-Stage des
+Skills. Dabei wird der Endpoint im Manifest auf die Lambda von oben
+gesetzt (Konto aus `AWS_DEPLOY_ROLE_ARN`, dazu `AWS_REGION` und
+`LAMBDA_FUNCTION_NAME`), danach werden die Interaktionsmodelle
+hochgeladen; schlägt ein Modell-Build fehl, schlägt der Workflow fehl.
+Solange `ALEXA_SKILL_ID` nicht gesetzt ist, wird er übersprungen.
+
+Er braucht einen Login-with-Amazon-Refresh-Token für dein
+Entwicklerkonto. Auf deinem Rechner, nach `ask configure`, den aus
+deinem ASK-CLI-Profil als Secret speichern (oder mit
+`ask util generate-lwa-tokens` einen eigenen erzeugen):
+
+```bash
+jq -r '.profiles.default.token.refresh_token' ~/.ask/cli_config | gh secret set ASK_REFRESH_TOKEN
+```
+
+Der Token gibt vollen SMAPI-Zugriff auf alle Skills des
+Entwicklerkontos, also nur als Secret ablegen. Dann diese Variablen
+anlegen:
+
+| Variable | Wert |
+|----------|------|
+| `ALEXA_SKILL_ID` | deine Skill-ID, `amzn1.ask.skill....` (Pflicht) |
+| `ASK_VENDOR_ID` | deine Vendor-ID (`ask smapi get-vendor-list`) (Pflicht) |
+| `ALEXA_LOCALES` | optional, z. B. `de-DE`, um nur diese Sprache zu deployen (Standard: alle Sprachen in `skill.json`) |
+
+Lokal prüfen, ohne hochzuladen:
+`SKILL_ID=... ENDPOINT_ARN=... DRY_RUN=1 scripts/deploy-skill-package.sh`.
 
 ## Power-User-Abkürzung: ASK CLI
 

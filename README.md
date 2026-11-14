@@ -76,8 +76,7 @@ utterances with it never reach this skill.
 │   │   └── strings.js             # Localized response strings
 │   └── test/                      # node:test unit tests
 ├── docs/installation{,.de}.md     # Installation guides (EN / DE)
-├── scripts/deploy-skill-package.sh  # SMAPI deploy of skill-package/
-├── .github/workflows/             # automatic Lambda + skill deploys
+├── .github/workflows/             # automatic Lambda + skill deploys (skill via jleuderalbert/alexa-skill-deploy)
 ├── ask-resources.json             # ASK CLI deployment config
 └── .env.example                   # Required Lambda env vars
 ```

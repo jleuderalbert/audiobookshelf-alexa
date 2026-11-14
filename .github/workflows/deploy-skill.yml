@@ -1,8 +1,9 @@
 name: Deploy Alexa skill
 
 # Deploys skill-package/ (manifest + interaction models) to the skill's
-# development stage whenever it changes on main. Setup (refresh token,
-# repository variables): see "Automatic deployment with GitHub Actions" in
+# development stage whenever it changes on main, using the shared
+# jleuderalbert/alexa-skill-deploy action. Setup (refresh token, repository
+# variables): see "Automatic deployment with GitHub Actions" in
 # docs/installation.md.
 
 on:
@@ -10,7 +11,6 @@ on:
     branches: [main]
     paths:
       - 'skill-package/**'
-      - 'scripts/deploy-skill-package.sh'
       - '.github/workflows/deploy-skill.yml'
   workflow_dispatch:
 
@@ -26,40 +26,24 @@ jobs:
     # Skipped until the repository variable ALEXA_SKILL_ID is set.
     if: vars.ALEXA_SKILL_ID != ''
     runs-on: ubuntu-latest
-    env:
-      SKILL_ID: ${{ vars.ALEXA_SKILL_ID }}
-      LOCALES: ${{ vars.ALEXA_LOCALES }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-
-      - name: Install ASK CLI
-        run: npm install -g ask-cli@2.30.7
-
-      # The CLI's environment-variable profile doesn't work for smapi
-      # commands, so write a profile holding only the refresh token; the CLI
-      # fetches a fresh access token on first use.
-      - name: Configure ASK CLI
-        env:
-          ASK_REFRESH_TOKEN: ${{ secrets.ASK_REFRESH_TOKEN }}
-          ASK_VENDOR_ID: ${{ vars.ASK_VENDOR_ID }}
-        run: |
-          mkdir -p ~/.ask
-          jq -n --arg rt "$ASK_REFRESH_TOKEN" --arg v "$ASK_VENDOR_ID" '{profiles: {default: {
-            vendor_id: $v,
-            token: {access_token: "", refresh_token: $rt, token_type: "bearer",
-                    expires_in: 0, expires_at: "1970-01-01T00:00:00.000Z"}}}}' > ~/.ask/cli_config
-          chmod 600 ~/.ask/cli_config
 
       # The endpoint is the Lambda the other workflow deploys to: account from
       # the deploy role ARN, plus region and function name.
-      - name: Deploy skill package
+      - name: Lambda endpoint
+        id: endpoint
         env:
           ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME || 'audiobookshelf-alexa' }}
         run: |
-          ENDPOINT_ARN="arn:aws:lambda:${REGION}:$(cut -d: -f5 <<< "$ROLE_ARN"):function:${FUNCTION_NAME}" \
-            scripts/deploy-skill-package.sh
+          echo "arn=arn:aws:lambda:${REGION}:$(cut -d: -f5 <<< "$ROLE_ARN"):function:${FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
+
+      - uses: jleuderalbert/alexa-skill-deploy@v1
+        with:
+          skill-id: ${{ vars.ALEXA_SKILL_ID }}
+          vendor-id: ${{ vars.ASK_VENDOR_ID }}
+          ask-refresh-token: ${{ secrets.ASK_REFRESH_TOKEN }}
+          endpoint: ${{ steps.endpoint.outputs.arn }}
+          locales: ${{ vars.ALEXA_LOCALES }}

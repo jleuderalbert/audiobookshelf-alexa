@@ -469,7 +469,8 @@ variables stay as configured in the Lambda console.
 
 `.github/workflows/deploy-skill.yml` uploads `skill-package/` to the
 skill's **development** stage on every push to `main` that touches it
-(or manually), via `scripts/deploy-skill-package.sh`. It sets the
+(or manually), via the shared action
+[`jleuderalbert/alexa-skill-deploy`](https://github.com/jleuderalbert/alexa-skill-deploy). It sets the
 manifest's endpoint to the Lambda above (account from
 `AWS_DEPLOY_ROLE_ARN`, plus `AWS_REGION` and `LAMBDA_FUNCTION_NAME`),
 then uploads the interaction models and fails if a model build fails.
@@ -493,8 +494,8 @@ account, so keep it only as a secret. Then add these variables:
 | `ASK_VENDOR_ID` | your vendor ID (`ask smapi get-vendor-list`) (required) |
 | `ALEXA_LOCALES` | optional, e.g. `de-DE` to deploy only that locale (default: all locales in `skill.json`) |
 
-To check locally without uploading:
-`SKILL_ID=... ENDPOINT_ARN=... DRY_RUN=1 scripts/deploy-skill-package.sh`.
+To check locally without uploading, with a clone of `alexa-skill-deploy`:
+`SKILL_ID=... ENDPOINT=<Lambda ARN> DRY_RUN=1 ../alexa-skill-deploy/deploy-skill-package.sh`.
 
 ## Power-user shortcut: ASK CLI
 

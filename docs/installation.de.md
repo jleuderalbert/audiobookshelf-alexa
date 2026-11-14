@@ -467,8 +467,8 @@ eingestellt sind.
 ### Skill-Paket (Manifest und Interaktionsmodelle)
 
 `.github/workflows/deploy-skill.yml` lädt `skill-package/` bei jedem
-Push auf `main`, der es ändert (oder manuell), über
-`scripts/deploy-skill-package.sh` in die **Development**-Stage des
+Push auf `main`, der es ändert (oder manuell), über die gemeinsame Action
+[`jleuderalbert/alexa-skill-deploy`](https://github.com/jleuderalbert/alexa-skill-deploy) in die **Development**-Stage des
 Skills. Dabei wird der Endpoint im Manifest auf die Lambda von oben
 gesetzt (Konto aus `AWS_DEPLOY_ROLE_ARN`, dazu `AWS_REGION` und
 `LAMBDA_FUNCTION_NAME`), danach werden die Interaktionsmodelle
@@ -494,8 +494,8 @@ anlegen:
 | `ASK_VENDOR_ID` | deine Vendor-ID (`ask smapi get-vendor-list`) (Pflicht) |
 | `ALEXA_LOCALES` | optional, z. B. `de-DE`, um nur diese Sprache zu deployen (Standard: alle Sprachen in `skill.json`) |
 
-Lokal prüfen, ohne hochzuladen:
-`SKILL_ID=... ENDPOINT_ARN=... DRY_RUN=1 scripts/deploy-skill-package.sh`.
+Lokal prüfen, ohne hochzuladen, mit einem Klon von `alexa-skill-deploy`:
+`SKILL_ID=... ENDPOINT=<Lambda-ARN> DRY_RUN=1 ../alexa-skill-deploy/deploy-skill-package.sh`.
 
 ## Power-User-Abkürzung: ASK CLI
 

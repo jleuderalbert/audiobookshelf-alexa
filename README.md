@@ -112,7 +112,10 @@ docker run -d -p 3000:3000 \
 `ABS_BASE_URL` can then be a LAN address; stream URLs use `ABS_PUBLIC_URL`
 because the Echo fetches them itself. With the GitHub Actions skill deploy,
 set the repository variable `SKILL_ENDPOINT` to the `https://` URL; without
-it the workflow points the skill at the Lambda.
+it the workflow points the skill at the Lambda. If the endpoint's certificate
+is a wildcard certificate (e.g. Cloudflare's `*.example.com` edge
+certificate), also set `SKILL_SSL_CERTIFICATE_TYPE=Wildcard`. Endpoint
+changes can take several minutes to reach Alexa.
 
 ## Development
 
@@ -296,7 +299,10 @@ die Skill-ID aus `SKILL_ID`. Docker-Image und Variablen: siehe
 [Self-hosting instead of Lambda](#self-hosting-instead-of-lambda);
 `ABS_BASE_URL` darf dann eine LAN-Adresse sein, Stream-URLs nutzen
 `ABS_PUBLIC_URL`. Für das Skill-Deployment per GitHub Actions die
-Repository-Variable `SKILL_ENDPOINT` auf die `https://`-URL setzen.
+Repository-Variable `SKILL_ENDPOINT` auf die `https://`-URL setzen, bei
+einem Wildcard-Zertifikat (z. B. Cloudflares Edge-Zertifikat) zusätzlich
+`SKILL_SSL_CERTIFICATE_TYPE=Wildcard`. Endpunkt-Änderungen brauchen bei Alexa
+einige Minuten.
 
 ## Entwicklung
 

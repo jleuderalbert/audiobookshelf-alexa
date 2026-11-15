@@ -47,6 +47,20 @@ jobs:
             echo "uri=arn:aws:lambda:${REGION}:$(cut -d: -f5 <<< "$ROLE_ARN"):function:${FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
           fi
 
+      # An https endpoint behind a wildcard certificate (e.g. Cloudflare's
+      # *.example.com edge certificate) must be registered as "Wildcard",
+      # otherwise Alexa rejects the certificate. Set the repository variable
+      # SKILL_SSL_CERTIFICATE_TYPE to override the type in skill.json (only
+      # used together with SKILL_ENDPOINT; a Lambda ARN has no certificate).
+      - name: Certificate type
+        if: vars.SKILL_ENDPOINT != '' && vars.SKILL_SSL_CERTIFICATE_TYPE != ''
+        env:
+          CERT_TYPE: ${{ vars.SKILL_SSL_CERTIFICATE_TYPE }}
+        run: |
+          jq --arg t "$CERT_TYPE" '.manifest.apis.custom.endpoint.sslCertificateType = $t' \
+            skill-package/skill.json > skill.json.tmp
+          mv skill.json.tmp skill-package/skill.json
+
       - uses: jleuderalbert/alexa-skill-deploy@v1
         with:
           skill-id: ${{ vars.ALEXA_SKILL_ID }}

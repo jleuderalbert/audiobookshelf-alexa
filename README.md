@@ -3,7 +3,8 @@
 A personal-use Alexa skill that streams audiobooks from a self-hosted
 [audiobookshelf](https://www.audiobookshelf.org/) instance.
 
-It runs on AWS Lambda (Node.js 24) and uses Alexa's `AudioPlayer`
+It runs on AWS Lambda (Node.js 24), or self-hosted as a small Docker
+container, and uses Alexa's `AudioPlayer`
 interface to stream tracks directly from your audiobookshelf server.
 Playback progress is synced back to audiobookshelf so it stays in sync
 with the web/mobile apps.
@@ -68,8 +69,9 @@ utterances with it never reach this skill.
 ├── skill-package/                 # Alexa skill manifest + interaction models
 │   ├── skill.json
 │   └── interactionModels/custom/{de-DE,en-US}.json
-├── lambda/                        # AWS Lambda backend
+├── lambda/                        # Skill backend (Lambda or self-hosted)
 │   ├── index.js                   # Skill entry point and intent handlers
+│   ├── server.js                  # HTTP server for self-hosting instead of Lambda
 │   ├── lib/
 │   │   ├── absClient.js           # audiobookshelf HTTP client
 │   │   ├── playback.js            # AudioPlayer token + offset helpers
@@ -78,7 +80,8 @@ utterances with it never reach this skill.
 ├── docs/installation{,.de}.md     # Installation guides (EN / DE)
 ├── .github/workflows/             # automatic Lambda + skill deploys (skill via jleuderalbert/alexa-skill-deploy)
 ├── ask-resources.json             # ASK CLI deployment config
-└── .env.example                   # Required Lambda env vars
+├── Dockerfile                     # Image for self-hosting server.js
+└── .env.example                   # Environment variables
 ```
 
 ## Installation
@@ -87,12 +90,36 @@ Step-by-step setup (audiobookshelf over HTTPS, Lambda, Alexa skill), troubleshoo
 re-deploying and automatic deployment with GitHub Actions:
 **[docs/installation.md](docs/installation.md)**.
 
+## Self-hosting instead of Lambda
+
+`lambda/server.js` serves the same skill over plain HTTP, so it can run next
+to audiobookshelf without AWS. Put something that terminates TLS with a
+publicly trusted certificate in front (reverse proxy, Cloudflare Tunnel) and
+use its `https://` URL as the skill endpoint. Every request must carry a
+valid Alexa signature, a fresh timestamp and the skill ID in `SKILL_ID`.
+`GET /health` is for local checks; only `POST /` needs to be public.
+
+```bash
+docker build -t audiobookshelf-alexa .
+docker run -d -p 3000:3000 \
+  -e SKILL_ID=amzn1.ask.skill.... \
+  -e ABS_BASE_URL=http://192.168.1.10:13378 \
+  -e ABS_PUBLIC_URL=https://abs.example.com \
+  -e ABS_API_KEY=... \
+  audiobookshelf-alexa
+```
+
+`ABS_BASE_URL` can then be a LAN address; stream URLs use `ABS_PUBLIC_URL`
+because the Echo fetches them itself. With the GitHub Actions skill deploy,
+set the repository variable `SKILL_ENDPOINT` to the `https://` URL; without
+it the workflow points the skill at the Lambda.
+
 ## Development
 
 ```bash
 cd lambda
 npm install
-npm test            # 39 tests across helpers, HTTP client, and the handler
+npm test            # tests for helpers, HTTP client, handler and server
 node --check index.js
 ```
 
@@ -196,7 +223,8 @@ Ein Alexa-Skill für den Privatgebrauch, der Hörbücher von einer
 selbst gehosteten [audiobookshelf](https://www.audiobookshelf.org/)-
 Instanz streamt.
 
-Er läuft auf AWS Lambda (Node.js 24) und nutzt Alexas
+Er läuft auf AWS Lambda (Node.js 24) oder selbst gehostet als kleiner
+Docker-Container und nutzt Alexas
 `AudioPlayer`-Schnittstelle, um Tracks direkt vom audiobookshelf-Server
 zu streamen. Der Wiedergabefortschritt wird zurück an audiobookshelf
 synchronisiert, sodass alles mit der Web-/Mobile-App in Sync bleibt.
@@ -257,12 +285,25 @@ Schritt-für-Schritt-Einrichtung (audiobookshelf per HTTPS, Lambda, Alexa-Skill)
 Neu-Deployen und automatisches Deployment mit GitHub Actions:
 **[docs/installation.de.md](docs/installation.de.md)**.
 
+## Selbst hosten statt Lambda
+
+`lambda/server.js` stellt denselben Skill per HTTP bereit, sodass er ohne
+AWS neben audiobookshelf laufen kann. Davor gehört etwas, das TLS mit einem
+öffentlich vertrauenswürdigen Zertifikat terminiert (Reverse Proxy,
+Cloudflare Tunnel); dessen `https://`-URL ist der Skill-Endpunkt. Jede
+Anfrage braucht eine gültige Alexa-Signatur, einen aktuellen Zeitstempel und
+die Skill-ID aus `SKILL_ID`. Docker-Image und Variablen: siehe
+[Self-hosting instead of Lambda](#self-hosting-instead-of-lambda);
+`ABS_BASE_URL` darf dann eine LAN-Adresse sein, Stream-URLs nutzen
+`ABS_PUBLIC_URL`. Für das Skill-Deployment per GitHub Actions die
+Repository-Variable `SKILL_ENDPOINT` auf die `https://`-URL setzen.
+
 ## Entwicklung
 
 ```bash
 cd lambda
 npm install
-npm test            # 39 Tests über Helfer, HTTP-Client und Handler
+npm test            # Tests für Helfer, HTTP-Client, Handler und Server
 node --check index.js
 ```
 

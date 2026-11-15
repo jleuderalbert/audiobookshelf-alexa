@@ -29,21 +29,28 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # The endpoint is the Lambda the other workflow deploys to: account from
-      # the deploy role ARN, plus region and function name.
-      - name: Lambda endpoint
+      # The endpoint is the repository variable SKILL_ENDPOINT if set (an
+      # https:// URL of a self-hosted server.js), otherwise the Lambda the
+      # other workflow deploys to: account from the deploy role ARN, plus
+      # region and function name.
+      - name: Skill endpoint
         id: endpoint
         env:
+          SKILL_ENDPOINT: ${{ vars.SKILL_ENDPOINT }}
           ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
           FUNCTION_NAME: ${{ vars.LAMBDA_FUNCTION_NAME || 'audiobookshelf-alexa' }}
         run: |
-          echo "arn=arn:aws:lambda:${REGION}:$(cut -d: -f5 <<< "$ROLE_ARN"):function:${FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
+          if [ -n "$SKILL_ENDPOINT" ]; then
+            echo "uri=$SKILL_ENDPOINT" >> "$GITHUB_OUTPUT"
+          else
+            echo "uri=arn:aws:lambda:${REGION}:$(cut -d: -f5 <<< "$ROLE_ARN"):function:${FUNCTION_NAME}" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: jleuderalbert/alexa-skill-deploy@v1
         with:
           skill-id: ${{ vars.ALEXA_SKILL_ID }}
           vendor-id: ${{ vars.ASK_VENDOR_ID }}
           ask-refresh-token: ${{ secrets.ASK_REFRESH_TOKEN }}
-          endpoint: ${{ steps.endpoint.outputs.arn }}
+          endpoint: ${{ steps.endpoint.outputs.uri }}
           locales: ${{ vars.ALEXA_LOCALES }}

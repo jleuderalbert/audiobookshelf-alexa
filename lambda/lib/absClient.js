@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('node:fs');
+
 // Thin client for the audiobookshelf HTTP API.
 // Docs: https://api.audiobookshelf.org/
 //
@@ -8,19 +10,24 @@
 // both as `Authorization: Bearer <key>` for API calls and as `?token=<key>`
 // for stream URLs.
 //
+// Optional: publicUrl is the base for stream URLs if it differs from
+// baseUrl. A self-hosted skill can call the API over the LAN (baseUrl) while
+// the Echo, which fetches streams itself, needs the public address.
+//
 // Optional: if the server sits behind Cloudflare Access, a service token
 // (cfAccess.clientId/clientSecret) is sent as CF-Access-Client-Id/-Secret
 // headers on API calls. Stream URLs can't carry headers, so the stream path
 // needs its own Access rule.
 
 class AbsClient {
-  constructor({ baseUrl, apiKey, cfAccess, fetchImpl } = {}) {
+  constructor({ baseUrl, publicUrl, apiKey, cfAccess, fetchImpl } = {}) {
     if (!baseUrl) throw new Error('AbsClient: baseUrl is required');
     if (!apiKey) throw new Error('AbsClient: apiKey is required');
     if (cfAccess && !cfAccess.clientId !== !cfAccess.clientSecret) {
       throw new Error('AbsClient: cfAccess needs both clientId and clientSecret');
     }
     this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.publicUrl = (publicUrl || baseUrl).replace(/\/+$/, '');
     this.apiKey = apiKey;
     this.cfAccess = cfAccess && cfAccess.clientId ? cfAccess : null;
     this.fetch = fetchImpl || globalThis.fetch;
@@ -122,16 +129,21 @@ class AbsClient {
   streamUrlFor(contentUrl) {
     const absolute = contentUrl.startsWith('http')
       ? contentUrl
-      : `${this.baseUrl}${contentUrl.startsWith('/') ? '' : '/'}${contentUrl}`;
+      : `${this.publicUrl}${contentUrl.startsWith('/') ? '' : '/'}${contentUrl}`;
     const sep = absolute.includes('?') ? '&' : '?';
     return `${absolute}${sep}token=${encodeURIComponent(this.apiKey)}`;
   }
 }
 
+// ABS_API_KEY_FILE (e.g. a Docker secret) wins over ABS_API_KEY.
 function fromEnv(env = process.env) {
+  const apiKey = env.ABS_API_KEY_FILE
+    ? fs.readFileSync(env.ABS_API_KEY_FILE, 'utf8').trim()
+    : env.ABS_API_KEY;
   return new AbsClient({
     baseUrl: env.ABS_BASE_URL,
-    apiKey: env.ABS_API_KEY,
+    publicUrl: env.ABS_PUBLIC_URL,
+    apiKey,
     cfAccess: {
       clientId: env.CF_ACCESS_CLIENT_ID,
       clientSecret: env.CF_ACCESS_CLIENT_SECRET,

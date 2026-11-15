@@ -3,7 +3,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { AbsClient } = require('../lib/absClient');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+
+const { AbsClient, fromEnv } = require('../lib/absClient');
 
 function fakeFetch(record, opts = {}) {
   return async (url, init) => {
@@ -43,6 +47,27 @@ test('streamUrlFor builds absolute URL with token', () => {
     c.streamUrlFor('https://cdn.example.com/x.mp3'),
     'https://cdn.example.com/x.mp3?token=secret',
   );
+});
+
+test('streamUrlFor uses publicUrl while the API uses baseUrl', async () => {
+  const calls = [];
+  const c = new AbsClient({
+    baseUrl: 'http://192.168.1.10:13378/',
+    publicUrl: 'https://abs.example.com/',
+    apiKey: 'k',
+    fetchImpl: fakeFetch(calls),
+  });
+  await c.request('/api/libraries');
+  assert.equal(calls[0].url, 'http://192.168.1.10:13378/api/libraries');
+  assert.equal(c.streamUrlFor('/api/items/a/file/1'), 'https://abs.example.com/api/items/a/file/1?token=k');
+});
+
+test('fromEnv reads the API key from ABS_API_KEY_FILE', () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'abs-')), 'key');
+  fs.writeFileSync(file, 'from-file\n');
+  const c = fromEnv({ ABS_BASE_URL: 'http://abs', ABS_API_KEY_FILE: file, ABS_API_KEY: 'from-env' });
+  assert.equal(c.apiKey, 'from-file');
+  assert.equal(c.publicUrl, 'http://abs');
 });
 
 test('request sends bearer auth header and JSON body', async () => {

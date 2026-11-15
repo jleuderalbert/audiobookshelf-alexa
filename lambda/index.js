@@ -761,6 +761,9 @@ const skill = Alexa.SkillBuilders.custom()
 
 exports.handler = async (event, context) => skill.invoke(event, context);
 
+// For server.js (self-hosted instead of Lambda).
+exports.skill = skill;
+
 // Exported only for the smoke-test scripts under /tmp.
 exports._internals = {
   buildPlayDirective,
